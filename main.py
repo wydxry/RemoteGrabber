@@ -23,8 +23,10 @@ def read_config(config_file):
     password = config['remote_server']['password']
     remote_folder = config['remote_server']['remote_folder']
     local_folder = config['remote_server']['local_folder']
+    max_workers = int(config['remote_server']['max_workers'])
+    operation_mode = int(config['remote_server']['operation_mode'])
     
-    return hostname, port, username, password, remote_folder, local_folder
+    return hostname, port, username, password, remote_folder, local_folder, max_workers, operation_mode
 
 
 def download_folder_via_sftp(hostname, port, username, password, remote_folder, local_folder):

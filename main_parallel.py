@@ -74,6 +74,20 @@ def download_folder_via_sftp(hostname, port, username, password, remote_folder, 
                         print(f"Task generated an exception for file {task[2].split('/')[-1]}: {e}")
 
 
+def ensure_remote_folder_exists(sftp, remote_folder_path):
+    """确保远程文件夹存在，如果不存在则创建它"""
+    try:
+        sftp.listdir(remote_folder_path)  # 尝试列出目录内容以检查目录是否存在
+    except FileNotFoundError:
+        # 如果捕获到FileNotFoundError，则目录不存在，需要创建
+        sftp.mkdir(remote_folder_path)
+        print(f"Created remote folder: {remote_folder_path}")
+    except IOError as e:
+        # 捕获其他IO错误，可能是权限问题或其他
+        print(f"Error accessing remote folder: {e}")
+        raise
+
+
 def upload_file_via_sftp(hostname, port, username, password, local_file_path, remote_file_path):
     try:
         # 每个任务创建自己的SSH和SFTP会话
@@ -81,6 +95,8 @@ def upload_file_via_sftp(hostname, port, username, password, local_file_path, re
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(hostname, port, username, password)
             with ssh.open_sftp() as sftp:
+                # 确保远程文件夹存在
+                # ensure_remote_folder_exists(sftp, os.path.dirname(remote_file_path))
                 sftp.put(local_file_path, remote_file_path)
                 print(f"Uploaded {local_file_path} to {remote_file_path}")
     except Exception as e:
@@ -93,6 +109,18 @@ def upload_folder_via_sftp(hostname, port, username, password, local_folder, rem
     # 确保本地文件夹存在
     if not os.path.exists(local_folder):
         raise FileNotFoundError(f"Local folder {local_folder} does not exist.")
+    
+    try:
+        # 每个任务创建自己的SSH和SFTP会话
+        with paramiko.SSHClient() as ssh:
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(hostname, port, username, password)
+            with ssh.open_sftp() as sftp:
+                # 确保远程文件夹存在
+                ensure_remote_folder_exists(sftp, os.path.dirname(remote_folder))
+                print(f"ensure_remote_folder_exists: {remote_folder}")
+    except Exception as e:
+        print(f"Failed to ensure_remote_folder_exists: {remote_folder}: {e}")
     
     # 遍历本地文件夹中的文件并准备上传任务
     local_file_list = [f for f in os.listdir(local_folder) if os.path.isfile(os.path.join(local_folder, f))]
@@ -116,7 +144,7 @@ def upload_folder_via_sftp(hostname, port, username, password, local_folder, rem
 
 if __name__ == '__main__':
     # 读取配置文件中的参数
-    config_file = './config.ini'
+    config_file = './cfg.ini'
     hostname, port, username, password, remote_folder, local_folder, max_workers, operation_mode = read_config(config_file)
 
     start_time = time.time()  # 记录开始时间
@@ -135,11 +163,24 @@ if __name__ == '__main__':
     execution_time = end_time - start_time  # 计算执行时间
     print(f"max_workers = {max_workers} executed in {execution_time:.4f} seconds.")
 
+    # download
     # max_workers = 3 executed in 19.1932 seconds.
     # max_workers = 5 executed in 12.4322 seconds.
     # max_workers = 10 executed in 6.9659 seconds.
     # max_workers = 20 executed in 4.0377 seconds.
     # max_workers = 30 executed in 3.9492 seconds.
     # max_workers = 40 executed in 4.0305 seconds.
+
+    # upload
+    # max_workers = 3 executed in 17.6494 seconds.
+    # max_workers = 5 executed in 10.0681 seconds.
+    # max_workers = 10 executed in 7.5605 seconds.
+    # max_workers = 20 executed in 3.7094 seconds.
+    # max_workers = 30 executed in 3.8722 seconds.
+    # max_workers = 40 executed in 3.1107 seconds.
+
+
+
+
 
 
