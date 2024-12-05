@@ -141,7 +141,7 @@ def files_transfer_filter(is_download, local_folder, remote_folder, local_file_l
     if is_download:
         idx = local_folder.find("RT")
         task = local_folder[idx:idx+5]
-        path = f"../processed_data/{task}/test_list.txt"
+        path = f"C:/code/python/ao/processed_data/{task}/test_list.txt"
         print(path)
         all_path = []
         with open(path, "r") as file:
@@ -155,7 +155,7 @@ def files_transfer_filter(is_download, local_folder, remote_folder, local_file_l
                 filename2 = filename.replace("_process", "")
                 all_path.append((path_prefix, filename, filename2))
 
-                if len(all_path) > 3:
+                if len(all_path) > 1:
                     break
 
         random.shuffle(all_path)
@@ -257,7 +257,8 @@ if __name__ == '__main__':
                 future.result()
                 logging.info("Process file successful")
             except Exception as e:
-                print(f"Failed to process server {server[0]}: {e}")
+                print(f"Failed to process server {server[0]} {server[1]}: {e}")
+                logging.error(f"Failed to process server {server[0]} {server[1]}: {e}")
     
     end_time = time.time()  # 记录结束时间
     execution_time = end_time - start_time  # 计算执行时间
