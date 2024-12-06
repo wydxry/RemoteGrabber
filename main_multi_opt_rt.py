@@ -13,6 +13,7 @@ import time
 import logging
 import random
 
+random.seed(1)
 
 # 配置日志，同时输出到文件和控制台
 logging.basicConfig(
@@ -113,12 +114,17 @@ def transfer_file(sftp_session, is_download, local_path, remote_path):
     try:
         if is_download:
             sftp.get(remote_path, local_path)
+            remote_size = sftp.stat(remote_path).st_size
+            local_size = os.path.getsize(local_path)
+            logging.info(f"remote path: {remote_path} remote size: {remote_size}, local path: {local_path} local size: {local_size}.")
+            assert remote_size == local_size
             logging.info(f"Downloaded {remote_path} to {local_path}")
         else:
             sftp.put(local_path, remote_path)
             logging.info(f"Uploaded {local_path} to {remote_path}")
     except Exception as e:
         logging.error(f"Failed to transfer {remote_path}: {e}")
+    
     finally:
         sftp.close()
 
@@ -139,14 +145,13 @@ def files_transfer_filter(is_download, local_folder, remote_folder, local_file_l
     tasks = []
 
     if is_download:
-        idx = local_folder.find("RT")
-        task = local_folder[idx:idx+5]
+        task = local_folder.split("/")[1]
         path = f"C:/code/python/ao/processed_data/{task}/test_list.txt"
         print(path)
         all_path = []
         with open(path, "r") as file:
             lines = file.readlines()
-            for i in range(0, len(lines), 40):
+            for i in range(0, len(lines), 10):
                 fpath = lines[i].rstrip()
                 fpaths = fpath.split("/")
                 assert len(fpaths) == 9
@@ -155,11 +160,11 @@ def files_transfer_filter(is_download, local_folder, remote_folder, local_file_l
                 filename2 = filename.replace("_process", "")
                 all_path.append((path_prefix, filename, filename2))
 
-                if len(all_path) > 1:
+                if len(all_path) > 400:
                     break
 
-        random.shuffle(all_path)
-        print(all_path)
+        # random.shuffle(all_path)
+        # print(all_path)
 
         for i in range(min(400, len(all_path))):
             ensure_local_folder_exists(local_folder + all_path[i][0])
@@ -205,6 +210,7 @@ def process_files(server_info, is_download, option):
                             future.result()
                             log_transfer_status(servername, is_download, task, True)
                         except Exception as e:
+                            logging.error(f"transfer_file error: {e}")
                             log_transfer_status(servername, is_download, task, False)
                             failed_tasks.add(task)
                 
@@ -249,7 +255,7 @@ if __name__ == '__main__':
 
     start_time = time.time()  # 记录开始时间
     
-    with ThreadPoolExecutor(max_workers=max(3, len(servers))) as executor:  # 为每个服务器创建一个线程池
+    with ThreadPoolExecutor(max_workers=len(servers)) as executor:  # 为每个服务器创建一个线程池
         future_to_server = {executor.submit(process_files, server[:-1], server[-1] == 'download', option): server for server in servers}
         for future in as_completed(future_to_server):
             server = future_to_server[future]
@@ -263,4 +269,5 @@ if __name__ == '__main__':
     end_time = time.time()  # 记录结束时间
     execution_time = end_time - start_time  # 计算执行时间
     print(f"All {len(servers)} servers process files in {execution_time:.4f} seconds.")
+    logging.info(f"All {len(servers)} servers process files in {execution_time:.4f} seconds.")
     
